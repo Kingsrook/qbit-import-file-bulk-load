@@ -14,7 +14,10 @@ The architecture of such an integration looks like:
 and a `BulkLoadProfile` as the instructions on how and where to load file contents.
 * A table built on the QQQ SFTP-backend module, using the `SFTPImportConfig` table as its variant-options table, to serve
 as the source for files to be imported.
-* 
+* A process that syncs files from the file-source table to a file staging table, along with rows in the `ImportFile` table
+to track their status.
+* A process that executes the bulk load process, using the selected bulk load profile, against records in the `ImportFile`
+table, accessing file contents from the staging file-table. 
 
 ## Usage
 
