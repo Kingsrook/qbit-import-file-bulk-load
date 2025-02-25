@@ -46,6 +46,8 @@ public class ImportFileBulkLoadQBitConfig implements QBitConfig
    private ProvidedOrSuppliedTableConfig sourceFileTableConfig;
    private ProvidedOrSuppliedTableConfig stagingFileTableConfig;
 
+   private String sftpPrivateKeyEnvVarName;
+
    private Map<String, String> additionalFieldsToCopyFromSftpImportConfigToImportFile;
 
    private QCodeReference processTracerCodeReference;
@@ -280,5 +282,37 @@ public class ImportFileBulkLoadQBitConfig implements QBitConfig
       this.tableMetaDataCustomizer = tableMetaDataCustomizer;
       return (this);
    }
+
+
+
+   /*******************************************************************************
+    ** Getter for sftpPrivateKeyEnvVarName
+    *******************************************************************************/
+   public String getSftpPrivateKeyEnvVarName()
+   {
+      return (this.sftpPrivateKeyEnvVarName);
+   }
+
+
+
+   /*******************************************************************************
+    ** Setter for sftpPrivateKeyEnvVarName
+    *******************************************************************************/
+   public void setSftpPrivateKeyEnvVarName(String sftpPrivateKeyEnvVarName)
+   {
+      this.sftpPrivateKeyEnvVarName = sftpPrivateKeyEnvVarName;
+   }
+
+
+
+   /*******************************************************************************
+    ** Fluent setter for sftpPrivateKeyEnvVarName
+    *******************************************************************************/
+   public ImportFileBulkLoadQBitConfig withSftpPrivateKeyEnvVarName(String sftpPrivateKeyEnvVarName)
+   {
+      this.sftpPrivateKeyEnvVarName = sftpPrivateKeyEnvVarName;
+      return (this);
+   }
+
 
 }

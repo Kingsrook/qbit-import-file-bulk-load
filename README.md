@@ -48,6 +48,11 @@ Required configs here are:
   * `.withSchedulerName("myScheduler")`
 
 Optional configs include:
+* To enable public-key authentication to SFTP servers, you can load a private key into your application
+server's sftp-backend, loading it through an environment variable, whose name you can set in the config
+field: `sftpPrivateKeyEnvVarName`.
+    * By convention, you may wish to set this config value to: `SFTP_PRIVATE_KEY_PEM`.
+    * If this field is not set, then all SFTP connections will require password authentication.
 * A `MetaDataCustomizerInterface<QTableMetaData>` can be run against all tables produced by this QBit:
     `.withTableMetaDataCustomizer(tableMetaDataCustomizer)`
 * A ProcessTracerCodeReference, which will be used on scheduled jobs ran by this QBit, as in:
@@ -68,7 +73,7 @@ public class ImportFileBulkLoadQBitMetaDataLoader extends MetaDataProducer<MetaD
 
       MetaDataCustomizerInterface<QTableMetaData> tableMetaDataCustomizer = (instance, table) ->
       {
-         // whatever customizations you want on all tables
+         // any customizations you may want on all tables
          return (table);
       };
 
@@ -93,11 +98,19 @@ public class ImportFileBulkLoadQBitMetaDataLoader extends MetaDataProducer<MetaD
 
 ## Provides
 ### Tables
-TODO
+* `sftpConnection` - Defines a connection to an SFTP server.
+* `sftpImportConfig` - Defines the usage of an SFTP Server and a Bulk Load Config for loading files into records.
+* `importFile` - Records which track files imported from an SFTP server, as they are bulk loaded. 
+* `SFTPImportSourceFileTable` - _If so configured_ - SFTP-backed file-table, where files to be sync'ed and bulk-loaded come from.
+* `SFTPImportStagingFileTable` - _If so configured_ - Filesystem table, where files imported from an SFTP Import source are stored.
 
-### Classes
-TODO
+### Processes
+* `SFTPConnectionTester` - Used to validate the setup of SFTP Connection records.
+* `syncSFTPImportConfigScheduledJob` - Table Sync process that manages Scheduled Job records for SFTPImportConfig records with a cron schedule.
+* `SFTPImportFileSyncProcess` - Sync files from an SFTP server source file table (as defined in an SFTP Import Config) to the staging table.
+* `ImportFileBulkLoadProcess` - Run the Bulk Load Process against ImportFile records and their corresponding file data.
 
 ## Dependencies
-TODO
-
+* `qqq-backend-module-filesystem` >= 0.24.0 (for SFTP support)
+* An active Quartz scheduler in your QQQ instance, for running scheduled cron jobs, along with Scheduled Jobs table.
+* 

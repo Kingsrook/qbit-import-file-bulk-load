@@ -49,6 +49,9 @@ public class SFTPConnectionTesterProcessMetaDataProducer extends MetaDataProduce
             new QFieldMetaData("id", QFieldType.INTEGER),
             new QFieldMetaData("name", QFieldType.STRING)
          ))
+         .withFields(List.of(
+            new QFieldMetaData("sftpPrivateKeyEnvVarName", QFieldType.STRING).withDefaultValue("SFTP_PRIVATE_KEY_PEM")
+         ))
          .withTransactionLevelAutoCommit()
          .withPreviewMessage("This is a preview of the connections that will be tested")
          .withSupportsFullValidation(false)

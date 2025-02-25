@@ -6,6 +6,7 @@ package com.kingsrook.qbits.importfilebulkload.metadata;
 
 
 import java.io.Serializable;
+import java.util.Base64;
 import java.util.Map;
 import java.util.Objects;
 import com.kingsrook.qbits.importfilebulkload.ImportFileBulkLoadQBitConfig;
@@ -13,6 +14,7 @@ import com.kingsrook.qbits.importfilebulkload.model.SFTPConnection;
 import com.kingsrook.qbits.importfilebulkload.model.SFTPImportConfig;
 import com.kingsrook.qqq.backend.core.actions.tables.QueryAction;
 import com.kingsrook.qqq.backend.core.exceptions.QException;
+import com.kingsrook.qqq.backend.core.instances.QMetaDataVariableInterpreter;
 import com.kingsrook.qqq.backend.core.model.actions.tables.query.QCriteriaOperator;
 import com.kingsrook.qqq.backend.core.model.actions.tables.query.QFilterCriteria;
 import com.kingsrook.qqq.backend.core.model.actions.tables.query.QQueryFilter;
@@ -25,6 +27,7 @@ import com.kingsrook.qqq.backend.core.model.metadata.QInstance;
 import com.kingsrook.qqq.backend.core.model.metadata.code.QCodeReference;
 import com.kingsrook.qqq.backend.core.model.metadata.qbits.QBitComponentMetaDataProducer;
 import com.kingsrook.qqq.backend.core.model.metadata.variants.BackendVariantsConfig;
+import com.kingsrook.qqq.backend.core.utils.StringUtils;
 import com.kingsrook.qqq.backend.core.utils.lambdas.UnsafeFunction;
 import com.kingsrook.qqq.backend.module.filesystem.sftp.model.metadata.SFTPBackendMetaData;
 import com.kingsrook.qqq.backend.module.filesystem.sftp.model.metadata.SFTPBackendVariantSetting;
@@ -78,6 +81,19 @@ public class SFTPImportSourceFileBackendMetaDataProducer extends QBitComponentMe
             SFTPBackendVariantSetting.BASE_PATH, "fullPath"
          ))
       );
+
+      /////////////////////////////////////////////////////////////////////
+      // if the config has an env-var name with a private-key PEM        //
+      // env-var name, then look up that value and add it to the backend //
+      /////////////////////////////////////////////////////////////////////
+      if(StringUtils.hasContent(getQBitConfig().getSftpPrivateKeyEnvVarName()))
+      {
+         String pem = new QMetaDataVariableInterpreter().interpret("${env." + getQBitConfig().getSftpPrivateKeyEnvVarName() + "}");
+         if(StringUtils.hasContent(pem))
+         {
+            backendMetaData.setPrivateKey(Base64.getDecoder().decode(pem.replaceAll("\\s", "")));
+         }
+      }
 
       return (backendMetaData);
    }

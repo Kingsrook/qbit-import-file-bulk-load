@@ -23,8 +23,10 @@ package com.kingsrook.qbits.importfilebulkload.process;
 
 
 import java.util.ArrayList;
+import java.util.Base64;
 import com.kingsrook.qbits.importfilebulkload.model.SFTPConnection;
 import com.kingsrook.qqq.backend.core.exceptions.QException;
+import com.kingsrook.qqq.backend.core.instances.QMetaDataVariableInterpreter;
 import com.kingsrook.qqq.backend.core.logging.QLogger;
 import com.kingsrook.qqq.backend.core.model.actions.processes.ProcessSummaryLine;
 import com.kingsrook.qqq.backend.core.model.actions.processes.ProcessSummaryLineInterface;
@@ -33,6 +35,7 @@ import com.kingsrook.qqq.backend.core.model.actions.processes.RunBackendStepOutp
 import com.kingsrook.qqq.backend.core.model.actions.processes.Status;
 import com.kingsrook.qqq.backend.core.processes.implementations.etl.streamedwithfrontend.AbstractLoadStep;
 import com.kingsrook.qqq.backend.core.processes.implementations.etl.streamedwithfrontend.ProcessSummaryProviderInterface;
+import com.kingsrook.qqq.backend.core.utils.StringUtils;
 import com.kingsrook.qqq.backend.module.filesystem.sftp.actions.SFTPTestConnectionAction;
 import org.apache.commons.lang3.BooleanUtils;
 
@@ -62,6 +65,20 @@ public class SFTPConnectionTesterLoadStep extends AbstractLoadStep implements Pr
             .withHostName(sftpConnection.getHostname())
             .withPort(sftpConnection.getPort())
             .withBasePath(sftpConnection.getBasePath());
+
+         //////////////////////////////////////////////////////////////////////
+         // add a private key for our server if we see an env var w/ a value //
+         //////////////////////////////////////////////////////////////////////
+         String sftpPrivateKeyEnvVarName = runBackendStepInput.getValueString("sftpPrivateKeyEnvVarName");
+         if(StringUtils.hasContent(sftpPrivateKeyEnvVarName))
+         {
+            String pem = new QMetaDataVariableInterpreter().interpret("${env." + sftpPrivateKeyEnvVarName + "}");
+            if(StringUtils.hasContent(pem))
+            {
+               input.setPrivateKey(Base64.getDecoder().decode(pem.replaceAll("\\s", "")));
+            }
+         }
+
          SFTPTestConnectionAction.SFTPTestConnectionTestOutput output = new SFTPTestConnectionAction().testConnection(input);
 
          String recordLabel = sftpConnection.getName() + " (Id " + sftpConnection.getId() + ")";
