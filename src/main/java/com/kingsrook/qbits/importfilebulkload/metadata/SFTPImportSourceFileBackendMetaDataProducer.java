@@ -6,7 +6,6 @@ package com.kingsrook.qbits.importfilebulkload.metadata;
 
 
 import java.io.Serializable;
-import java.util.Base64;
 import java.util.Map;
 import java.util.Objects;
 import com.kingsrook.qbits.importfilebulkload.ImportFileBulkLoadQBitConfig;
@@ -15,6 +14,7 @@ import com.kingsrook.qbits.importfilebulkload.model.SFTPImportConfig;
 import com.kingsrook.qqq.backend.core.actions.tables.QueryAction;
 import com.kingsrook.qqq.backend.core.exceptions.QException;
 import com.kingsrook.qqq.backend.core.instances.QMetaDataVariableInterpreter;
+import com.kingsrook.qqq.backend.core.logging.QLogger;
 import com.kingsrook.qqq.backend.core.model.actions.tables.query.QCriteriaOperator;
 import com.kingsrook.qqq.backend.core.model.actions.tables.query.QFilterCriteria;
 import com.kingsrook.qqq.backend.core.model.actions.tables.query.QQueryFilter;
@@ -29,8 +29,10 @@ import com.kingsrook.qqq.backend.core.model.metadata.qbits.QBitComponentMetaData
 import com.kingsrook.qqq.backend.core.model.metadata.variants.BackendVariantsConfig;
 import com.kingsrook.qqq.backend.core.utils.StringUtils;
 import com.kingsrook.qqq.backend.core.utils.lambdas.UnsafeFunction;
+import com.kingsrook.qqq.backend.module.filesystem.sftp.actions.AbstractSFTPAction;
 import com.kingsrook.qqq.backend.module.filesystem.sftp.model.metadata.SFTPBackendMetaData;
 import com.kingsrook.qqq.backend.module.filesystem.sftp.model.metadata.SFTPBackendVariantSetting;
+import static com.kingsrook.qqq.backend.core.logging.LogUtils.logPair;
 
 
 /*******************************************************************************
@@ -38,6 +40,8 @@ import com.kingsrook.qqq.backend.module.filesystem.sftp.model.metadata.SFTPBacke
  *******************************************************************************/
 public class SFTPImportSourceFileBackendMetaDataProducer extends QBitComponentMetaDataProducer<QBackendMetaData, ImportFileBulkLoadQBitConfig>
 {
+   private static final QLogger LOG = QLogger.getLogger(SFTPImportSourceFileBackendMetaDataProducer.class);
+
    public static final String NAME = "SFTPImportSourceFileBackend";
 
    public static final String VARIANT_TYPE_KEY = SFTPImportConfig.TABLE_NAME;
@@ -88,10 +92,18 @@ public class SFTPImportSourceFileBackendMetaDataProducer extends QBitComponentMe
       /////////////////////////////////////////////////////////////////////
       if(StringUtils.hasContent(getQBitConfig().getSftpPrivateKeyEnvVarName()))
       {
-         String pem = new QMetaDataVariableInterpreter().interpret("${env." + getQBitConfig().getSftpPrivateKeyEnvVarName() + "}");
-         if(StringUtils.hasContent(pem))
+         try
          {
-            backendMetaData.setPrivateKey(Base64.getDecoder().decode(pem.replaceAll("\\s", "")));
+            String pem = new QMetaDataVariableInterpreter().interpret("${env." + getQBitConfig().getSftpPrivateKeyEnvVarName() + "}");
+            if(StringUtils.hasContent(pem))
+            {
+               byte[] privateKeyBytes = AbstractSFTPAction.pemStringToDecodedBytes(pem);
+               backendMetaData.setPrivateKey(privateKeyBytes);
+            }
+         }
+         catch(Exception e)
+         {
+            LOG.warn("Error interpreting private-key PEM env-var into private key bytes.  Private key will NOT be used in this backend", e, logPair("backendName", backendMetaData.getName()), logPair("envVarName", getQBitConfig().getSftpPrivateKeyEnvVarName()));
          }
       }
 

@@ -23,7 +23,6 @@ package com.kingsrook.qbits.importfilebulkload.process;
 
 
 import java.util.ArrayList;
-import java.util.Base64;
 import com.kingsrook.qbits.importfilebulkload.model.SFTPConnection;
 import com.kingsrook.qqq.backend.core.exceptions.QException;
 import com.kingsrook.qqq.backend.core.instances.QMetaDataVariableInterpreter;
@@ -36,6 +35,7 @@ import com.kingsrook.qqq.backend.core.model.actions.processes.Status;
 import com.kingsrook.qqq.backend.core.processes.implementations.etl.streamedwithfrontend.AbstractLoadStep;
 import com.kingsrook.qqq.backend.core.processes.implementations.etl.streamedwithfrontend.ProcessSummaryProviderInterface;
 import com.kingsrook.qqq.backend.core.utils.StringUtils;
+import com.kingsrook.qqq.backend.module.filesystem.sftp.actions.AbstractSFTPAction;
 import com.kingsrook.qqq.backend.module.filesystem.sftp.actions.SFTPTestConnectionAction;
 import org.apache.commons.lang3.BooleanUtils;
 
@@ -57,6 +57,29 @@ public class SFTPConnectionTesterLoadStep extends AbstractLoadStep implements Pr
    @Override
    public void runOnePage(RunBackendStepInput runBackendStepInput, RunBackendStepOutput runBackendStepOutput) throws QException
    {
+      //////////////////////////////////////////////////////////////////////
+      // add a private key for our server if we see an env var w/ a value //
+      //////////////////////////////////////////////////////////////////////
+      byte[] privateKeyBytes          = null;
+      String sftpPrivateKeyEnvVarName = runBackendStepInput.getValueString("sftpPrivateKeyEnvVarName");
+      if(StringUtils.hasContent(sftpPrivateKeyEnvVarName))
+      {
+         try
+         {
+            String pem = new QMetaDataVariableInterpreter().interpret("${env." + sftpPrivateKeyEnvVarName + "}");
+            if(StringUtils.hasContent(pem))
+            {
+               privateKeyBytes = AbstractSFTPAction.pemStringToDecodedBytes(pem);
+            }
+         }
+         catch(Exception e)
+         {
+            String message = "There was an error interpreting the application server's SFTP private key, which will cause public-key based authentication to fail.";
+            LOG.warn(message, e);
+            summaryLines.add(new ProcessSummaryLine(Status.WARNING, null, message));
+         }
+      }
+
       for(SFTPConnection sftpConnection : runBackendStepInput.getRecordsAsEntities(SFTPConnection.class))
       {
          SFTPTestConnectionAction.SFTPTestConnectionTestInput input = new SFTPTestConnectionAction.SFTPTestConnectionTestInput()
@@ -64,20 +87,8 @@ public class SFTPConnectionTesterLoadStep extends AbstractLoadStep implements Pr
             .withPassword(sftpConnection.getPassword())
             .withHostName(sftpConnection.getHostname())
             .withPort(sftpConnection.getPort())
-            .withBasePath(sftpConnection.getBasePath());
-
-         //////////////////////////////////////////////////////////////////////
-         // add a private key for our server if we see an env var w/ a value //
-         //////////////////////////////////////////////////////////////////////
-         String sftpPrivateKeyEnvVarName = runBackendStepInput.getValueString("sftpPrivateKeyEnvVarName");
-         if(StringUtils.hasContent(sftpPrivateKeyEnvVarName))
-         {
-            String pem = new QMetaDataVariableInterpreter().interpret("${env." + sftpPrivateKeyEnvVarName + "}");
-            if(StringUtils.hasContent(pem))
-            {
-               input.setPrivateKey(Base64.getDecoder().decode(pem.replaceAll("\\s", "")));
-            }
-         }
+            .withBasePath(sftpConnection.getBasePath())
+            .withPrivateKey(privateKeyBytes);
 
          SFTPTestConnectionAction.SFTPTestConnectionTestOutput output = new SFTPTestConnectionAction().testConnection(input);
 
